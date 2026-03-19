@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from typing import Optional
 import enka
 import genshin
 import os
@@ -43,12 +44,16 @@ async def update_assets():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/genshin/{user_id}")
-async def read_genshin_user(user_id: int):
+@app.get("/genshin/{uid}")
+@app.get("/genshin")
+async def read_genshin_user(uid: Optional[int] = None):
+    if uid is None:
+        raise HTTPException(status_code=400, detail="UID tidak boleh kosong")
+
     async with enka.GenshinClient(enka.gi.Language.ENGLISH) as enka_client:
         results = await asyncio.gather(
-            hoyolab_client.get_full_genshin_user(user_id),
-            enka_client.fetch_showcase(user_id),
+            hoyolab_client.get_full_genshin_user(uid),
+            enka_client.fetch_showcase(uid),
             return_exceptions=True
         )
 
@@ -70,7 +75,7 @@ async def read_genshin_user(user_id: int):
         raise HTTPException(status_code=502, detail="Both data sources failed")
 
     return {
-        "user_id": user_id,
+        "uid": uid,
         "info": enka_result,
         "data": hoyolab_result
     }
