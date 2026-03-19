@@ -77,5 +77,6 @@ async def read_genshin_user(uid: Optional[int] = None):
     return {
         "uid": uid,
         "info": enka_result,
-        "data": hoyolab_result
+        "data": hoyolab_result,
+        "has_hoyolab": not isinstance(data, Exception)
     }
