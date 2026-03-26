@@ -72,7 +72,7 @@ async def read_genshin_user(uid: Optional[int] = None):
         enka_result = data2.player
 
     if isinstance(data, Exception) and isinstance(data2, Exception):
-        raise HTTPException(status_code=502, detail="Both data sources failed")
+        raise HTTPException(status_code=400, detail="Gagal mendapatkan data dari kedua sumber / UID tidak valid")
 
     return {
         "uid": uid,
