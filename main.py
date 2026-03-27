@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from typing import Optional
 import enka
@@ -30,6 +32,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def format_percentage(value: int) -> str:
+    result = value / 10
+    formatted = f"{result:.1f}".rstrip("0").rstrip(".")
+    return f"{formatted}%"
+
+def structure_world_explorations(explorations: list) -> list:
+    by_id = {}
+    for area in explorations:
+        area["exploration_percentage"] = format_percentage(area["exploration_percentage"])
+        for sub in area.get("area_exploration_list", []):
+            if "exploration_percentage" in sub:
+                sub["exploration_percentage"] = format_percentage(sub["exploration_percentage"])
+        area["sub_areas"] = []
+        by_id[area["id"]] = area
+
+    result = []
+    for area in by_id.values():
+        pid = area.get("parent_id", 0)
+        if pid != 0 and pid in by_id:
+            by_id[pid]["sub_areas"].append(area)
+        else:
+            result.append(area)
+
+    return result
 
 @app.get("/")
 def read_root():
@@ -74,9 +101,19 @@ async def read_genshin_user(uid: Optional[int] = None):
     if isinstance(data, Exception) and isinstance(data2, Exception):
         raise HTTPException(status_code=400, detail="Gagal mendapatkan data dari kedua sumber / UID tidak valid")
 
-    return {
+    response_data = {
         "uid": uid,
         "info": enka_result,
         "data": hoyolab_result,
         "has_hoyolab": not isinstance(data, Exception)
     }
+
+    encoded = jsonable_encoder(response_data)
+
+    if encoded.get("data") and isinstance(encoded["data"], dict):
+        if "world_explorations" in encoded["data"]:
+            encoded["data"]["world_explorations"] = structure_world_explorations(
+                encoded["data"]["world_explorations"]
+            )
+
+    return JSONResponse(content=encoded)
