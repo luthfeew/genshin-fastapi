@@ -2,4 +2,4 @@ fastapi
 uvicorn[standard]
 python-dotenv
 enka>=2.5.19
-genshin>=1.7.25
+genshin>=1.7.26
